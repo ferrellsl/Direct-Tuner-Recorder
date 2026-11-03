@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+  # The recorder runs as its own system user, never as root.
+  if ! getent passwd directtuner >/dev/null; then
+    adduser --system --group --home /var/lib/directtuner-recorder --no-create-home directtuner
+  fi
+  mkdir -p /var/lib/directtuner-recorder/recordings
+  chown directtuner:directtuner /var/lib/directtuner-recorder /var/lib/directtuner-recorder/recordings
+  if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+    systemctl enable directtuner-recorder.service || true
+    systemctl restart directtuner-recorder.service || true
+  fi
+fi
+exit 0

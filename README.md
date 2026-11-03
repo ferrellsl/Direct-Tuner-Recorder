@@ -28,15 +28,17 @@ recorder does the work in the background.
 ## What you need
 
 - A SiliconDust HDHomeRun tuner on your network.
-- One 64-bit Windows 10 or 11 computer to run the recorder, ideally one that's usually on. It can be
-  asleep: the recorder wakes it to record.
+- One computer to run the recorder, ideally one that's usually on:
+  - **Windows 10 or 11, 64-bit.** It can be asleep: the recorder wakes it to record.
+  - **Linux, x86_64,** such as Ubuntu 22.04 or later or Debian 12. The Linux version is untested; see
+    [Linux](#linux).
 - [Direct Tuner PVR](https://github.com/ferrellsl/Direct-Tuner-PVR) 21.2.0 or later in each Kodi. It's
   also included in the [AC-4 build of Kodi](https://github.com/ferrellsl/kodi-ac4/releases).
 - Enough disk space for recordings. An hour of HD is about 3 to 7 GB.
 
 ## Install
 
-On the one computer that will record:
+On the one computer that will record. For Linux, see [Linux](#linux) instead.
 
 1. Download `DirectTunerRecorder-1.0.0-setup.exe` from the
    [Releases page](https://github.com/ferrellsl/Direct-Tuner-Recorder/releases) and run it.
@@ -54,6 +56,50 @@ The installer starts the recorder right away and sets it to start with Windows. 
 
 - Allows the recorder through Windows Firewall on port 8866, from your local network only.
 - Turns on wake timers in the current power plan, so the recorder can wake the computer to record.
+
+## Linux
+
+**The Linux version hasn't been tested yet.** It's the same program as on Windows, built for Linux,
+and it has only been checked to start, find a tuner and load the guide. Please
+[report](#reporting-a-problem) how it works for you.
+
+**Debian, Ubuntu and related distributions** (Ubuntu 22.04 or later, Debian 12 or later): download
+`directtuner-recorder_1.0.0_amd64.deb` from the
+[Releases page](https://github.com/ferrellsl/Direct-Tuner-Recorder/releases) and install it:
+
+```
+sudo apt install ./directtuner-recorder_1.0.0_amd64.deb
+```
+
+That installs `/usr/bin/directtuner-recorder`, creates a `directtuner` system user for it to run as, and
+starts the `directtuner-recorder` service, which also starts at boot. Settings, timers and the log are in
+`/var/lib/directtuner-recorder`, and recordings go in `/var/lib/directtuner-recorder/recordings` until
+you change it.
+
+To change the settings, edit `/var/lib/directtuner-recorder/recorder.json` (see [Settings](#settings))
+and restart the service:
+
+```
+sudo systemctl restart directtuner-recorder
+```
+
+If you choose another recordings folder, the `directtuner` user must be able to write to it, for
+example `sudo chown directtuner:directtuner /srv/tv`. A network share must be mounted by the system,
+such as in `/etc/fstab`.
+
+**Other distributions:** `directtuner-recorder-1.0.0-linux-x86_64.tar.gz` holds the same program and
+its systemd unit. It needs glibc 2.35 or later and libcurl. Create the user and the
+`/var/lib/directtuner-recorder` folder yourself, or edit the unit to suit.
+
+Kodi on other computers reaches the recorder on port 8866, TCP and UDP. If the computer has a
+firewall, allow that port from your local network, for example `sudo ufw allow from 192.168.1.0/24 to
+any port 8866`.
+
+On Linux the recorder doesn't set wake timers or keep the computer awake, so turn off automatic sleep
+on that computer. The log is `/var/lib/directtuner-recorder/recorder.log`, and
+`journalctl -u directtuner-recorder` shows the same.
+
+To uninstall: `sudo apt remove directtuner-recorder`. Recordings, settings and timers are kept.
 
 ## Connect Kodi
 
@@ -115,7 +161,7 @@ recordings, settings and timers stay where they are.
 - **One tuner device.** If you have more than one HDHomeRun, set `tunerAddress` to the one to use.
 - **One recorder per tuner.** Two recorders using the same tuner would compete for it, like two
   separate DVRs.
-- **Windows only for now.** A Linux version is planned.
+- **The Linux version is untested,** and doesn't wake or keep the computer awake. See [Linux](#linux).
 - **Copy-protected (DRM) channels** can't be recorded or played.
 - **AC-4 sound** on ATSC 3.0 channels needs the [AC-4 build of Kodi](https://github.com/ferrellsl/kodi-ac4/releases).
   The recorder saves the sound either way.
@@ -142,6 +188,9 @@ powershell tools\build.ps1 -Installer
 The program is `build\DirectTunerRecorder.exe` and the installer goes in `dist`. To try it without
 installing, run `DirectTunerRecorder.exe --console --data <folder>`, which runs it in the window and
 keeps its settings and log in that folder.
+
+On Linux, with cmake, ninja-build, g++ and libcurl4-openssl-dev installed, `bash tools/package-deb.sh`
+builds the `.deb` and the `.tar.gz` in `dist`.
 
 `src/core` is shared with [Direct Tuner PVR](https://github.com/ferrellsl/Direct-Tuner-PVR) and has no
 Kodi code in it; `src/service` is the recorder itself.

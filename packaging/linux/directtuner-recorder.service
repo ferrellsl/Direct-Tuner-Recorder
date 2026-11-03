@@ -1,0 +1,14 @@
+[Unit]
+Description=Direct Tuner Recorder (HDHomeRun recording for Kodi)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=directtuner
+Group=directtuner
+ExecStart=/usr/bin/directtuner-recorder --data /var/lib/directtuner-recorder
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

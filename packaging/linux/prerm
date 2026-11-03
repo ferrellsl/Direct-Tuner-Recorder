@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+if [ -d /run/systemd/system ]; then
+  systemctl stop directtuner-recorder.service || true
+  if [ "$1" = remove ]; then
+    systemctl disable directtuner-recorder.service || true
+  fi
+fi
+exit 0

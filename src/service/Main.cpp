@@ -44,12 +44,14 @@ std::condition_variable g_stopWake;
 bool g_stop = false;
 std::atomic<bool> g_resume{false};
 
+#ifdef _WIN32
 void RequestStop()
 {
   std::lock_guard<std::mutex> lock(g_stopMutex);
   g_stop = true;
   g_stopWake.notify_all();
 }
+#endif
 
 void LogToFile(dt::LogLevel level, const std::string& text)
 {
@@ -86,11 +88,13 @@ void LogToFile(dt::LogLevel level, const std::string& text)
   }
 }
 
+#ifdef _WIN32
 std::string EnvOr(const char* name, const std::string& fallback)
 {
   const char* value = std::getenv(name);
   return value && *value ? value : fallback;
 }
+#endif
 
 std::string DefaultDataFolder()
 {
@@ -422,7 +426,8 @@ void Usage()
 {
   std::puts("Direct Tuner Recorder records from an HDHomeRun tuner for Kodi's Direct Tuner PVR.\n"
             "\n"
-            "  --console        run in this window instead of as a service (Ctrl+C stops)\n"
+            "  --console        run in this window instead of as a service (Ctrl+C stops);\n"
+            "                   on Linux it always runs this way, under systemd as a service\n"
             "  --data FOLDER    where settings, timers and the log go\n"
             "  --install [--account NAME --password PASSWORD]\n"
             "                   install and start the Windows service, as Local System or this account\n"
@@ -486,6 +491,8 @@ int main(int argc, char** argv)
   g_console = true;
   std::signal(SIGINT, OnSignal);
   std::signal(SIGTERM, OnSignal);
+  // A viewer closing its connection mid-stream must not end the program.
+  std::signal(SIGPIPE, SIG_IGN);
   (void)kServiceName;
 #endif
   return Run(nullptr);

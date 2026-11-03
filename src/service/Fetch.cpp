@@ -13,7 +13,9 @@
 #include <windows.h>
 #include <winhttp.h>
 #else
-#include <cstdio>
+#include <curl/curl.h>
+
+#include <mutex>
 #endif
 
 namespace dt
@@ -95,17 +97,45 @@ bool FetchUrl(const std::string& url, std::string& body)
 
 #else
 
+namespace
+{
+
+size_t Append(char* data, size_t size, size_t count, void* target)
+{
+  static_cast<std::string*>(target)->append(data, size * count);
+  return size * count;
+}
+
+} // namespace
+
 bool FetchUrl(const std::string& url, std::string& body)
 {
   if (url.rfind("http://", 0) == 0)
     return HttpGetText(url, 30000, body);
 
-  // Not written yet: the Linux recorder needs an https client (libcurl) for the tuner's own guide.
-  // An XMLTV guide file works without it.
-  (void)url;
-  (void)body;
-  Log(LogLevel::Warning, "The tuner's guide needs https, which this build can't do yet; use a guide file");
-  return false;
+  static std::once_flag once;
+  std::call_once(once, [] { curl_global_init(CURL_GLOBAL_DEFAULT); });
+
+  CURL* curl = curl_easy_init();
+  if (!curl)
+    return false;
+  body.clear();
+  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Append);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+  curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+  curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
+  curl_easy_setopt(curl, CURLOPT_USERAGENT, "DirectTunerRecorder/1.0");
+  const CURLcode result = curl_easy_perform(curl);
+  long status = 0;
+  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+  curl_easy_cleanup(curl);
+  // The URL carries the tuner's DeviceAuth, so it never goes in the log.
+  if (result != CURLE_OK)
+    Log(LogLevel::Warning, "Guide download failed: %s", curl_easy_strerror(result));
+  return result == CURLE_OK && status == 200 && !body.empty();
 }
 
 #endif

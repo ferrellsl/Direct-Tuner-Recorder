@@ -23,9 +23,12 @@ if(WIN32)
   set_target_properties(DirectTunerRecorder PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded")
 else()
   find_package(Threads REQUIRED)
+  # For https: the tuner's own guide comes from SiliconDust's servers.
+  find_package(CURL REQUIRED)
   target_compile_definitions(DirectTunerRecorder PRIVATE _FILE_OFFSET_BITS=64)
   target_compile_options(DirectTunerRecorder PRIVATE -Wall)
-  target_link_libraries(DirectTunerRecorder PRIVATE Threads::Threads)
+  target_link_libraries(DirectTunerRecorder PRIVATE Threads::Threads CURL::libcurl)
+  set_target_properties(DirectTunerRecorder PROPERTIES OUTPUT_NAME directtuner-recorder)
 endif()
 
 install(TARGETS DirectTunerRecorder RUNTIME DESTINATION bin)

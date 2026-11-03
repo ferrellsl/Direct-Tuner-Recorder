@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload || true
+fi
+# Recordings, settings and timers in /var/lib/directtuner-recorder are kept, even on purge.
+exit 0
